@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income Expense Calculator</title>
+    <link href="./src/output.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto mt-10 p-6 bg-white shadow-md rounded-md">
+        <header class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-700">Income Expense Calculator</h1>
+            <div class="totals mt-4">
+                <div class="text-green-600 font-semibold">Total Income: <span id="total-income">0</span></div>
+                <div class="text-red-600 font-semibold">Total Expenses: <span id="total-expenses">0</span></div>
+                <div class="text-blue-600 font-semibold">Net Balance: <span id="net-balance">0</span></div>
+            </div>
+        </header>
+
+        <section class="entry-form mb-6">
+            <div class="flex flex-col gap-4 md:flex-row">
+                <input type="text" id="description" placeholder="Description" class="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="amount" placeholder="Amount" class="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-1">
+                        <input type="radio" name="type" value="income" checked class="text-blue-500 focus:ring-blue-500">
+                        <span>Income</span>
+                    </label>
+                    <label class="flex items-center gap-1">
+                        <input type="radio" name="type" value="expense" class="text-blue-500 focus:ring-blue-500">
+                        <span>Expense</span>
+                    </label>
+                </div>
+                <button id="add-btn" class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">Add</button>
+                <button id="reset-btn" class="bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400">Reset</button>
+            </div>
+        </section>
+
+        <section class="filters mb-6 text-center">
+            <div class="inline-flex gap-4">
+                <label class="flex items-center gap-1">
+                    <input type="radio" name="filter" value="all" checked class="text-blue-500 focus:ring-blue-500">
+                    <span>All</span>
+                </label>
+                <label class="flex items-center gap-1">
+                    <input type="radio" name="filter" value="income" class="text-blue-500 focus:ring-blue-500">
+                    <span>Income</span>
+                </label>
+                <label class="flex items-center gap-1">
+                    <input type="radio" name="filter" value="expense" class="text-blue-500 focus:ring-blue-500">
+                    <span>Expense</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="entries">
+            <ul id="entries-list" class="list-none p-0"></ul>
+        </section>
+    </div>
+
+    <script>
+        let entries = JSON.parse(localStorage.getItem('entries')) || [];
+
+        const totalIncomeElement = document.getElementById('total-income');
+        const totalExpensesElement = document.getElementById('total-expenses');
+        const netBalanceElement = document.getElementById('net-balance');
+        const entriesList = document.getElementById('entries-list');
+        const descriptionInput = document.getElementById('description');
+        const amountInput = document.getElementById('amount');
+        const addBtn = document.getElementById('add-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        const updateTotals = () => {
+            const totalIncome = entries.reduce((sum, entry) => entry.type === 'income' ? sum + entry.amount : sum, 0);
+            const totalExpenses = entries.reduce((sum, entry) => entry.type === 'expense' ? sum + entry.amount : sum, 0);
+            totalIncomeElement.textContent = totalIncome.toFixed(2);
+            totalExpensesElement.textContent = totalExpenses.toFixed(2);
+            netBalanceElement.textContent = (totalIncome - totalExpenses).toFixed(2);
+        };
+
+        const renderEntries = (filter = 'all') => {
+            entriesList.innerHTML = '';
+            const filteredEntries = filter === 'all' ? entries : entries.filter(entry => entry.type === filter);
+
+            filteredEntries.forEach((entry, index) => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('flex', 'justify-between', 'p-2', 'border-b', 'border-gray-300');
+                listItem.innerHTML = `
+                    <span>${entry.description} - $${entry.amount.toFixed(2)}</span>
+                    <div class="flex gap-2">
+                        <button class="bg-yellow-400 text-black py-1 px-3 rounded-md hover:bg-yellow-500" onclick="editEntry(${index})">Edit</button>
+                        <button class="bg-red-500 text-white py-1 px-3 rounded-md hover:bg-red-600" onclick="deleteEntry(${index})">Delete</button>
+                    </div>
+                `;
+                entriesList.appendChild(listItem);
+            });
+        };
+
+        const saveEntries = () => {
+            localStorage.setItem('entries', JSON.stringify(entries));
+        };
+
+        const addEntry = () => {
+            const description = descriptionInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            const type = document.querySelector('input[name="type"]:checked').value;
+
+            if (description && !isNaN(amount) && amount > 0) {
+                entries.push({ description, amount, type });
+                saveEntries();
+                updateTotals();
+                renderEntries();
+                descriptionInput.value = '';
+                amountInput.value = '';
+            } else {
+                alert('Please provide valid inputs for description and amount.');
+            }
+        };
+
+        const editEntry = (index) => {
+            const entry = entries[index];
+            descriptionInput.value = entry.description;
+            amountInput.value = entry.amount;
+            document.querySelector(`input[name="type"][value="${entry.type}"]`).checked = true;
+            deleteEntry(index);
+        };
+
+        const deleteEntry = (index) => {
+            entries.splice(index, 1);
+            saveEntries();
+            updateTotals();
+            renderEntries();
+        };
+
+        addBtn.addEventListener('click', addEntry);
+        resetBtn.addEventListener('click', () => {
+            descriptionInput.value = '';
+            amountInput.value = '';
+        });
+
+        document.querySelectorAll('input[name="filter"]').forEach(filter => {
+            filter.addEventListener('change', (event) => {
+                renderEntries(event.target.value);
+            });
+        });
+
+        updateTotals();
+        renderEntries();
+    </script>
+</body>
+</html>
